@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bin Packing Algorithm</title>
+    <script src="https://code.jquery.com/jquery-3.6.4.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+    <style>
+        html{
+        width:100%;
+        margin: 0;
+        padding:0;
+        }
+
+   .cube {
+  width: 30px;
+  height: 30px;
+  display: inline-block;
+  margin: 5px;
+  color:white;
+  background-color: red;
+  transition: background-color 0.5s ease;
+  text-align: center;
+  z-index: 1000;
+}
+
+      #bag {
+         width: 100%;
+         height: 100px;
+         background-color: gray;
+      }
+
+
+    </style>
+</head>
+<body>
+<nav class="navbar navbar-expand-lg navbar-light bg-light" style="justify-content:center">
+    <a class="navbar-brand" style="text-align:center" href="#"><h2>Knapsack Algorithm</h2></a>
+</nav>
+<br>
+<div class="row" style="width:100%;margin:0">
+    <div class="col-lg-2 col-md-2 col-sm-2 col-xs-1"></div>
+    <div class="col-lg-8 col-md-8 col-sm-8 col-xs-10">
+        <form id="binPackingForm" action="/get_result" method="post">
+            <div class="row">
+                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12">
+                    <label for="n">Number of items: </label>
+                </div>
+                <div class="col-lg-9 col-md-8 col-sm-6 col-xs-12">
+                    <input class="form-control" name="n" style="width:100%" id="n" value="{{ n }}" required/>
+                </div>
+            </div>
+            <br>
+            <div class="row">
+                <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12">
+                    <label for="W">Bag capacity: </label>
+                </div>
+                <div class="col-lg-9 col-md-8 col-sm-6 col-xs-12">
+                    <input class="form-control" name="W" id="W" style="width:100%" value="{{ W }}" required/>
+                </div>
+            </div>
+            <br>
+            <hr/>
+            <!-- items' value and weight-->
+            <div id="itemList">
+                {% for i in range(n) %}
+                <div class="row">
+                    <div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">
+                        <h5>Item {{i+1}}</h5>
+                    </div>
+                    <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12">
+                        <label for="v{{i+1}}">Value of item {{ i+1 }}: </label>
+                    </div>
+                    <div class="col-lg-9 col-md-8 col-sm-6 col-xs-12">
+                        <input class="form-control item" onchange="change()" id="v{{i+1}}" name="v{{i+1}}"
+                               value="{{ v[i] }}" required/>
+                    </div>
+                    <br>
+                    <br>
+                    <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12">
+                        <label for="w{{i+1}}"> Weight of item {{ i+1 }}: </label>
+                    </div>
+                    <div class="col-lg-9 col-md-8 col-sm-6 col-xs-12">
+                        <input class="form-control item" onchange="change()" id="w{{i+1}}" name="w{{i+1}}"
+                               value="{{ w[i] }}" required/>
+                    </div>
+                </div>
+                <hr/>
+                {% endfor %}
+            </div>
+            <button class="btn-primary" type="button" onclick="getResult()">Calculate</button>
+        </form>
+        <br>
+        <br>
+        <div style="background-color:lightblue;text-align:center" id="res">
+            <div class="row" style="padding:2%">
+<!--                show error-->
+                <div class="hidden" id="error_message" role="alert"></div>
+<!--                show result-->
+                <p id="lines"></p>
+                <b id="val"></b>
+            </div>
+        </div>
+        <br>
+    </div>
+    <div class="col-lg-2 col-md-2 col-sm-2 col-xs-1"></div>
+</div>
+<!--use panel for visualization, cubes are added in "cubes" and the selected ones are added to the bag-->
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-lg-2 col-md-2 col-sm-2 col-xs-1"></div>
+        <div class="col-lg-8 col-md-8 col-sm-8 col-xs-10">
+            <div class="card">
+                <div class="card-header bg-primary text-white">Visualization</div>
+                <div class="card-body">
+                    <div id="visualization" class="panel panel-primary">
+                        <div id="cubes"></div>
+                        <br>
+                        <div id="bag" style="border-radius:5px;color:white;text-align:center">
+                            <div class="placeholder">Bag</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-lg-2 col-md-2 col-sm-2 col-xs-1"></div>
+    </div>
+</div>
+<br>
+<br>
+<script src="https://code.jquery.com/jquery-3.6.4.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+<script>
+        // Function to fetch result from the server
+        function getResult() {
+            // Make an AJAX request to the server
+            $.ajax({
+                url: '/get_result',
+                method: 'POST',
+                data: $('#binPackingForm').serialize(),  // Serialize the form data
+                dataType: 'json',
+                success: function(response) {
+                 if("error" in response){
+                    // if there is error in result, we show the message
+                     document.getElementById("error_message").innerHTML = response.error;
+                     $('html,body').animate({scrollTop: $("#res").offset().top});
+                 }
+                 else{
+                    // get the result
+                    document.getElementById("error_message").innerHTML = "";
+                    var resultVal = response.result_val;
+                    var resultLines = response.result_lines;
+                    document.getElementById("val").innerText = resultVal;
+                    var str_line = "";
+                    for (var i = 0; i < resultLines.length; i++) {
+                        str_line += resultLines[i] + "<br>";
+                    }
+                    document.getElementById("lines").innerHTML = str_line;
+                    var numCubes = response.n;
+                    // if an item is selected, it will be added to selectedItems
+                    var selectedItems = [];
+                    for (var i = 0; i < numCubes; i++) {
+                        if (response.picked_items[i] > 0) {
+                            selectedItems.push(1);
+                        } else {
+                            selectedItems.push(0);
+                        }
+                    }
+                    // use animation and visualization
+                    var selectedOrder = response.selected_order;
+                    var selectedPercent = response.selected_percent;
+                    $('html,body').animate({scrollTop: $("#res").offset().top});
+                    visualizeResult(selectedItems, selectedOrder, numCubes, selectedPercent);
+                }},
+                error: function(response) {
+                    // Check for 'error'
+                if (response.responseJSON && response.responseJSON.error) {
+                    // Display the error message
+                    document.getElementById("error_message").innerHTML = response.responseJSON.error;
+                } else {
+                    // Handle other types of errors
+                    console.error('Error fetching result:', response);
+                }
+                }
+            });
+        }
+     // based o the result we get from the server, we add cubes and add them to the bag
+     function visualizeResult(selectedItems, selectedOrder, numCubes, selectedPercent) {
+       var cubesContainer = $('#cubes');
+       var bag = $('#bag');
+       cubesContainer.empty();
+
+       for (var i = 0; i < numCubes; i++) {
+            var order;
+            order = i + 1;
+            var cube = $('<div class="cube" id="cube'+ order +'">' + order + '</div>');
+            cubesContainer.append(cube);
+       }
+       for (var i = 0; i < selectedOrder.length; i++) {
+        addCubeToBag(bag, selectedOrder, i, selectedPercent[i]);
+       }
+     }
+
+function addCubeToBag(bag, selectedOrder, index, selectedPercent) {
+   var id = selectedOrder[index] + 1;
+    var cube = $("#cube" + id);
+
+    // Remove the cube from the DOM after a delay
+    setTimeout(function () {
+        $("#cubes #cube" + id).remove();
+    }, index * 1000); // Adjust the delay duration (in milliseconds) as needed
+
+    // Calculate the height of the cube based on the selected percentage
+    var cubeHeight = 100 - selectedPercent;
+
+    // Append a clone of the cube with colored background to the bag after a delay
+    setTimeout(function () {
+        var clonedCube = cube.clone();
+        clonedCube.addClass('cube');
+        clonedCube.css({
+            'background': 'linear-gradient(to bottom, red ' + cubeHeight + '%, green ' + cubeHeight + '%)',
+            'background-size': '100% 100%'
+        });
+        bag.append(clonedCube);
+    }, index * 1000 + 500); // Adjust the delay duration for appending
+}
+
+
+        // Attach a change event handler to the 'n' input
+        $('#n').on('input', function() {
+            // Get the new value of 'n'
+            var newN = $(this).val();
+             document.getElementById("val").innerText = "Max value = ?";
+            document.getElementById("lines").innerHTML = "";
+            document.getElementById("cubes").innerHTML = "";
+            document.getElementById("bag").innerHTML = "";
+            document.getElementById("bag").innerHTML = document.getElementById("bag").innerHTML + '<div class="placeholder">Bag</div>';
+            // Update the UL and its contents based on the new 'n'
+            updateUL(newN);
+        });
+        // Attach a change event handler to the 'W' input
+        $('#W').on('input', function() {
+             document.getElementById("val").innerText = "Max value = ?";
+            document.getElementById("lines").innerHTML = "";
+            document.getElementById("cubes").innerHTML = "";
+            document.getElementById("bag").innerHTML = "";
+            document.getElementById("bag").innerHTML = document.getElementById("bag").innerHTML + '<div class="placeholder">Bag</div>';
+        });
+
+    // if items' values change, this function is called
+     function change(){
+        document.getElementById("val").innerText = "Max value = ?";
+        document.getElementById("lines").innerHTML = "";
+        document.getElementById("cubes").innerHTML = "";
+        document.getElementById("bag").innerHTML = '<div class="placeholder">Bag</div>';
+    }
+
+
+        // Function to update the UL based on the new 'n'
+        function updateUL(newN) {
+            var ul = $('#itemList');
+            ul.empty(); // Clear the current contents
+
+            // Add new list items based on the new 'n'
+            for (var i = 1; i <= newN; i++) {
+                str_append = '<div class="row">'+
+                  '<div class="col-lg-12 col-md-12 col-sm-12 col-xs-12">' +
+                   '<h5>Item '+ i +'</h5>' +
+                '</div>' +
+                '<div class="col-lg-3 col-md-4 col-sm-6 col-xs-12">' +
+                   '<label for="v' + (i) + '" >Value of item '+ i +': </label>' +
+                '</div>' +
+                '<div class="col-lg-9 col-md-8 col-sm-6 col-xs-12">' +
+                 '<input class="form-control item" onchange="change()" id="v' + (i) + '" name="v' + (i) + '" value=""/>' +
+                '</div>' +
+                '<br>' +
+                '<br>' +
+                '<div class="col-lg-3 col-md-4 col-sm-6 col-xs-12">' +
+                    '<label for="w' + (i) + '"> Weight of item '+ i +': </label>' +
+                '</div>' +
+                '<div class="col-lg-9 col-md-8 col-sm-6 col-xs-12">' +
+                '<input class="form-control item" onchange="change()" id"w' + (i) + '" name="w' + (i) + '" value=""/>' +
+                '</div>' +
+            '</div>' +
+            '<hr />';
+            ul.append(str_append);
+            }
+        }
+            // First define the default values
+            document.getElementById("val").innerText = "Max value = ?";
+            document.getElementById("lines").innerHTML = "";
+            document.getElementById("cubes").innerHTML = "";
+            document.getElementById("W").value = "";
+            document.getElementById("n").value = "";
+            document.getElementById("itemList").innerHTML = "";
+            document.getElementById("bag").innerHTML = "";
+            document.getElementById("error_message").innerHTML = "";
+            document.getElementById("bag").innerHTML = document.getElementById("bag").innerHTML + '<div class="placeholder">Bag</div>';
+</script>
+</body>
+</html>
