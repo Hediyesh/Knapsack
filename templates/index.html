@@ -43,7 +43,7 @@
 <div class="row" style="width:100%;margin:0">
     <div class="col-lg-2 col-md-2 col-sm-2 col-xs-1"></div>
     <div class="col-lg-8 col-md-8 col-sm-8 col-xs-10">
-        <form id="binPackingForm" action="/get_result" method="post">
+        <form id="knapsackForm" action="/get_result" method="post">
             <div class="row">
                 <div class="col-lg-3 col-md-4 col-sm-6 col-xs-12">
                     <label for="n">Number of items: </label>
@@ -139,7 +139,7 @@
             $.ajax({
                 url: '/get_result',
                 method: 'POST',
-                data: $('#binPackingForm').serialize(),  // Serialize the form data
+                data: $('#knapsackForm').serialize(),  // Serialize the form data
                 dataType: 'json',
                 success: function(response) {
                  if("error" in response){
